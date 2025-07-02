@@ -4,3 +4,6 @@ __pycache__/
 *.pkl
 *.zip
 *.db
+venv/
+.venv/
+*.pkl
