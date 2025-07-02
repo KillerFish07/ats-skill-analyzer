@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ATS Resume Analyzer</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; max-width: 960px; margin: auto; }
+    textarea, input, button { width: 100%; margin-bottom: 15px; padding: 10px; font-size: 16px; }
+    button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+    .card { background: white; padding: 20px; margin-top: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; }
+    ul { padding-left: 20px; }
+    li { margin-bottom: 5px; }
+    a { color: #007bff; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>ATS Resume Skill Analyzer</h1>
+
+  <label>Job Role</label>
+  <input type="text" id="job_role" placeholder="e.g. Data Scientist" />
+
+  <label>Job Description</label>
+  <textarea id="job_description" rows="6" placeholder="Paste the job description..."></textarea>
+
+  <label>Resume</label>
+  <textarea id="resume" rows="6" placeholder="Paste your resume text..."></textarea>
+
+  <button onclick="analyze()">Analyze</button>
+
+  <div id="results"></div>
+
+  <script>
+    async function analyze() {
+      const resume = document.getElementById("resume").value;
+      const job_description = document.getElementById("job_description").value;
+      const job_role = document.getElementById("job_role").value;
+
+      const results = document.getElementById("results");
+      results.innerHTML = "<p>⏳ Analyzing...</p>";
+
+      try {
+        const response = await fetch("/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resume, job_description, job_role })
+        });
+
+        const data = await response.json();
+
+        const safeList = list => Array.isArray(list) ? list : [];
+
+        const card = (title, content) => `
+          <div class="card">
+            <h2>${title}</h2>
+            ${content}
+          </div>
+        `;
+
+        const ul = list => `<ul>${safeList(list).map(item => `<li>${item}</li>`).join('')}</ul>`;
+
+        const groupedUl = groups => {
+          return Object.entries(groups || {}).map(
+            ([group, skills]) => `<li><strong>${group}:</strong><br>${ul(skills)}</li>`
+          ).join('');
+        };
+
+        results.innerHTML = `
+          ${card("JD Skills", ul(data.jd_skills))}
+          ${card("Resume Skills (Grouped by Section)", Object.entries(data.resume_skills_by_section || {}).map(([section, skills]) =>
+              `<strong>${section}:</strong>${ul(skills)}`
+            ).join('<br>'))}
+          ${card("Matched Skills", ul(data.matched_skills))}
+          ${card("Missing Skills", ul(data.missing_skills))}
+          ${card("Score", `<p>${data.score}% match</p>`)}
+          ${card("Grouped JD Skills", `<ul>${groupedUl(data.grouped_jd_skills)}</ul>`)}
+          ${card("Grouped Resume Skills", Object.entries(data.grouped_resume_skills || {}).map(
+              ([section, groups]) => `<strong>${section}:</strong><ul>${groupedUl(groups)}</ul>`
+          ).join('<br>'))}
+          ${card("Grouped Missing Skills", `<ul>${groupedUl(data.grouped_missing_skills)}</ul>`)}
+          ${card("Expected Skills (by Role)", `<ul>${groupedUl(data.expected_coverage)}</ul>`)}
+          ${card("Learning Resources", Object.entries(data.learning_resources || {}).map(
+              ([skill, links]) => `<li><strong>${skill}</strong>:<br>${links.map(link => `<a href='${link.url}' target='_blank'>${link.title} (${link.free ? "Free" : "Paid"})</a>`).join('<br>')}</li>`
+          ).join(''))}
+        `;
+      } catch (err) {
+        console.error(err);
+        results.innerHTML = `<div class="card"><h2>Error</h2><pre>${err}</pre></div>`;
+      }
+    }
+  </script>
+</body>
+</html>
