@@ -1,17 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>ATS Resume Analyzer</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; max-width: 960px; margin: auto; }
-    textarea, input, button { width: 100%; margin-bottom: 15px; padding: 10px; font-size: 16px; }
-    button { background-color: #007bff; color: white; border: none; cursor: pointer; }
-    .card { background: white; padding: 20px; margin-top: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    h2 { margin-top: 0; }
-    ul { padding-left: 20px; }
-    li { margin-bottom: 5px; }
-    a { color: #007bff; text-decoration: none; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+      max-width: 960px;
+      margin: auto;
+    }
+
+    textarea, input, button {
+      width: 100%;
+      margin-bottom: 15px;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 5px;
+    }
+
+    a {
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    .video-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .video-item img {
+      width: 120px;
+      height: auto;
+      margin-right: 10px;
+      border-radius: 6px;
+    }
+
+    .video-item a {
+      font-weight: bold;
+      color: #007bff;
+    }
   </style>
 </head>
 <body>
@@ -65,24 +121,49 @@
           ).join('');
         };
 
+        const createLearningResourcesCard = (resources) => {
+          return Object.entries(resources || {}).map(([skill, { articles, videos }]) => {
+            const articleLinks = (articles || []).map(a =>
+              `<a href="${a.url}" target="_blank">${a.title} (${a.free ? "Free" : "Paid"})</a>`
+            ).join("<br>");
+
+            const videoThumbnails = (videos || []).map(v => `
+              <div class="video-item">
+                <a href="${v.url}" target="_blank">
+                  <img src="${v.thumbnail}" alt="Video Thumbnail" />
+                </a>
+                <a href="${v.url}" target="_blank">${v.title}</a>
+              </div>
+            `).join('');
+
+            return `
+              <div class="card">
+                <h3>${skill}</h3>
+                <strong>📚 Articles:</strong><br>${articleLinks || "No articles found"}<br><br>
+                <strong>🎥 Videos:</strong><br>${videoThumbnails || "No videos found"}
+              </div>
+            `;
+          }).join('');
+        };
+
         results.innerHTML = `
           ${card("JD Skills", ul(data.jd_skills))}
           ${card("Resume Skills (Grouped by Section)", Object.entries(data.resume_skills_by_section || {}).map(([section, skills]) =>
-              `<strong>${section}:</strong>${ul(skills)}`
-            ).join('<br>'))}
+            `<strong>${section}:</strong>${ul(skills)}`
+          ).join('<br>'))}
           ${card("Matched Skills", ul(data.matched_skills))}
           ${card("Missing Skills", ul(data.missing_skills))}
           ${card("Score", `<p>${data.score}% match</p>`)}
           ${card("Grouped JD Skills", `<ul>${groupedUl(data.grouped_jd_skills)}</ul>`)}
           ${card("Grouped Resume Skills", Object.entries(data.grouped_resume_skills || {}).map(
-              ([section, groups]) => `<strong>${section}:</strong><ul>${groupedUl(groups)}</ul>`
+            ([section, groups]) => `<strong>${section}:</strong><ul>${groupedUl(groups)}</ul>`
           ).join('<br>'))}
           ${card("Grouped Missing Skills", `<ul>${groupedUl(data.grouped_missing_skills)}</ul>`)}
           ${card("Expected Skills (by Role)", `<ul>${groupedUl(data.expected_coverage)}</ul>`)}
-          ${card("Learning Resources", Object.entries(data.learning_resources || {}).map(
-              ([skill, links]) => `<li><strong>${skill}</strong>:<br>${links.map(link => `<a href='${link.url}' target='_blank'>${link.title} (${link.free ? "Free" : "Paid"})</a>`).join('<br>')}</li>`
-          ).join(''))}
+          <h2>📚 Learning Resources with Thumbnails</h2>
+          ${createLearningResourcesCard(data.learning_resources)}
         `;
+
       } catch (err) {
         console.error(err);
         results.innerHTML = `<div class="card"><h2>Error</h2><pre>${err}</pre></div>`;
